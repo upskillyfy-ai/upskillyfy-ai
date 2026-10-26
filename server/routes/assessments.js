@@ -1,15 +1,61 @@
 import express from 'express'
+import mongoose from 'mongoose'
+import Assessment from '../models/Assessment.js'
+import Attempt from '../models/Attempt.js'
+import { protect, adminOnly, optionalAuth } from '../middleware/auth.js'
 import { seedAssessments } from '../data/assessmentsSeed.js'
 
 const router = express.Router()
 
-// In-memory seed data (fallback if DB not ready)
+// Fallback seed data in case database is offline or not yet connected
 const { branches, assessments, branchesWithCounts, assessmentsByBranch } = seedAssessments()
+
+const isDbConnected = () => mongoose.connection.readyState === 1
+
+/**
+ * Helper to get a test either from MongoDB (if connected) or in-memory fallback
+ */
+async function findTestById(testId) {
+  if (isDbConnected()) {
+    try {
+      const testFromDb = await Assessment.findOne({ id: testId }).lean()
+      if (testFromDb) return testFromDb
+    } catch {
+      // Fall through to in-memory on DB read error
+    }
+  }
+  return assessments.find((a) => a.id === testId) || null
+}
 
 // GET /api/assessments/branches - List all branches with test counts
 router.get('/branches', async (_req, res) => {
   try {
-    res.json({ success: true, data: branchesWithCounts })
+    if (isDbConnected()) {
+      try {
+        const dbAssessments = await Assessment.find({}, 'id branchId').lean()
+        if (dbAssessments.length > 0) {
+          const counts = {}
+          for (const a of dbAssessments) {
+            counts[a.branchId] = (counts[a.branchId] || 0) + 1
+          }
+          const data = branches.map((b) => ({
+            ...b,
+            testCount: counts[b.id] || 0,
+            testsCount: counts[b.id] || 0
+          }))
+          return res.json({ success: true, data })
+        }
+      } catch {
+        // Fall through to seed count
+      }
+    }
+
+    const data = branchesWithCounts.map((b) => ({
+      ...b,
+      testCount: b.testCount ?? 0,
+      testsCount: b.testCount ?? 0
+    }))
+    res.json({ success: true, data })
   } catch (err) {
     console.error('Assessments branches error:', err)
     res.status(500).json({ success: false, message: 'Failed to fetch branches' })
@@ -30,16 +76,36 @@ router.get('/branches/:branchId', async (req, res) => {
   }
 })
 
-// GET /api/assessments/branches/:branchId/tests - List tests for a branch
+// GET /api/assessments/branches/:branchId/tests - List tests for a branch (no answer key)
 router.get('/branches/:branchId/tests', async (req, res) => {
   try {
-    const branchTests = assessmentsByBranch(req.params.branchId)
-    if (!branchTests) {
-      return res.status(404).json({ success: false, message: 'Branch not found' })
+    let branchTests = null
+
+    if (isDbConnected()) {
+      try {
+        const fromDb = await Assessment.find({ branchId: req.params.branchId }).lean()
+        if (fromDb.length > 0) branchTests = fromDb
+      } catch {
+        // Fallback
+      }
     }
-    // Return tests without correct answers
+
+    if (!branchTests) {
+      branchTests = assessmentsByBranch(req.params.branchId)
+    }
+
+    if (!branchTests || branchTests.length === 0) {
+      const branchExists = branches.some((b) => b.id === req.params.branchId)
+      if (!branchExists) {
+        return res.status(404).json({ success: false, message: 'Branch not found' })
+      }
+      return res.json({ success: true, data: [] })
+    }
+
+    // Strip questions and correct answers for safe listing
     const safeTests = branchTests.map((t) => ({
       id: t.id,
+      branchId: t.branchId,
       title: t.title,
       description: t.description,
       difficulty: t.difficulty,
@@ -48,6 +114,7 @@ router.get('/branches/:branchId/tests', async (req, res) => {
       questionsCount: t.questionsCount,
       markingScheme: t.markingScheme,
     }))
+
     res.json({ success: true, data: safeTests })
   } catch (err) {
     console.error('Branch tests error:', err)
@@ -55,14 +122,14 @@ router.get('/branches/:branchId/tests', async (req, res) => {
   }
 })
 
-// GET /api/assessments/tests/:testId - Get test details (no correct answers)
+// GET /api/assessments/tests/:testId - Get test details with question text (no answer key)
 router.get('/tests/:testId', async (req, res) => {
   try {
-    const test = assessments.find((a) => a.id === req.params.testId)
+    const test = await findTestById(req.params.testId)
     if (!test) {
       return res.status(404).json({ success: false, message: 'Test not found' })
     }
-    // Return test with questions but without correct answers
+
     const safeTest = {
       id: test.id,
       branchId: test.branchId,
@@ -73,7 +140,7 @@ router.get('/tests/:testId', async (req, res) => {
       totalMarks: test.totalMarks,
       questionsCount: test.questionsCount,
       markingScheme: test.markingScheme,
-      questions: test.questions.map((q) => ({
+      questions: (test.questions || []).map((q) => ({
         id: q.id,
         text: q.text,
         options: q.options,
@@ -83,6 +150,7 @@ router.get('/tests/:testId', async (req, res) => {
         topic: q.topic,
       })),
     }
+
     res.json({ success: true, data: safeTest })
   } catch (err) {
     console.error('Test details error:', err)
@@ -90,14 +158,15 @@ router.get('/tests/:testId', async (req, res) => {
   }
 })
 
-// GET /api/assessments/tests/:testId/questions - Get questions for a test (without correct answers)
+// GET /api/assessments/tests/:testId/questions - Get test questions only
 router.get('/tests/:testId/questions', async (req, res) => {
   try {
-    const test = assessments.find((a) => a.id === req.params.testId)
+    const test = await findTestById(req.params.testId)
     if (!test) {
       return res.status(404).json({ success: false, message: 'Test not found' })
     }
-    const safeQuestions = test.questions.map((q) => ({
+
+    const safeQuestions = (test.questions || []).map((q) => ({
       id: q.id,
       text: q.text,
       options: q.options,
@@ -106,6 +175,7 @@ router.get('/tests/:testId/questions', async (req, res) => {
       difficulty: q.difficulty,
       topic: q.topic,
     }))
+
     res.json({ success: true, data: safeQuestions })
   } catch (err) {
     console.error('Test questions error:', err)
@@ -114,28 +184,47 @@ router.get('/tests/:testId/questions', async (req, res) => {
 })
 
 // POST /api/assessments/attempts/start - Start a new attempt
-router.post('/attempts/start', async (req, res) => {
+router.post('/attempts/start', optionalAuth, async (req, res) => {
   try {
     const { testId } = req.body
-    const test = assessments.find((a) => a.id === testId)
+    const test = await findTestById(testId)
     if (!test) {
       return res.status(404).json({ success: false, message: 'Test not found' })
     }
 
     const now = new Date()
-    const deadline = new Date(now.getTime() + test.duration * 60 * 1000)
+    const deadline = new Date(now.getTime() + (test.duration || 30) * 60 * 1000)
+    const generatedAttemptId = `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+    // Try saving attempt record in MongoDB if connected
+    if (isDbConnected()) {
+      try {
+        await Attempt.create({
+          attemptId: generatedAttemptId,
+          assessmentId: test.id,
+          branchId: test.branchId,
+          user: req.user?._id || null,
+          startedAt: now,
+          deadline,
+          isSubmitted: false,
+          answers: []
+        })
+      } catch (saveErr) {
+        // Non-blocking fallback
+      }
+    }
 
     const attempt = {
-      id: `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: generatedAttemptId,
       assessmentId: test.id,
       branchId: test.branchId,
-      user: req.user?.id || 'anonymous',
+      user: req.user?._id || 'anonymous',
       startedAt: now,
       deadline,
       submittedAt: null,
       isSubmitted: false,
       currentQuestionIndex: 0,
-      answers: test.questions.map((q) => ({
+      answers: (test.questions || []).map((q) => ({
         questionId: q.id,
         selectedOption: null,
         isMarkedForReview: false,
@@ -148,7 +237,6 @@ router.post('/attempts/start', async (req, res) => {
       result: null,
     }
 
-    // In production, store in DB
     res.json({ success: true, data: attempt })
   } catch (err) {
     console.error('Start attempt error:', err)
@@ -156,42 +244,42 @@ router.post('/attempts/start', async (req, res) => {
   }
 })
 
-// POST /api/assessments/attempts/submit - Submit an attempt and get score
-router.post('/attempts/submit', async (req, res) => {
+// POST /api/assessments/attempts/submit - Submit an attempt and compute score
+router.post('/attempts/submit', optionalAuth, async (req, res) => {
   try {
-    const { attemptId, answers } = req.body
+    const { attemptId, testId, answers = [], timeTakenSeconds = 0 } = req.body
 
-    // Find the test to get correct answers
-    // The attempt contains assessmentId, so we look it up
-    const test = assessments.find((a) => a.id === req.body.testId)
+    const test = await findTestById(testId)
     if (!test) {
       return res.status(404).json({ success: false, message: 'Test not found' })
     }
 
-    // Compute score
+    // Compute score securely on the server
     const answerMap = new Map(answers.map((a) => [a.questionId, a.selectedOption]))
     let score = 0
     let correct = 0
     let incorrect = 0
     let unanswered = 0
 
-    test.questions.forEach((q) => {
+    const questions = test.questions || []
+    questions.forEach((q) => {
       const selected = answerMap.get(q.id)
       if (selected === null || selected === undefined) {
         unanswered++
         return
       }
       if (selected === q.correctAnswer) {
-        score += q.marks
+        score += (q.marks ?? 1)
         correct++
       } else {
-        score -= q.negativeMarks
+        score -= (q.negativeMarks ?? 0.25)
         incorrect++
       }
     })
 
-    const maxScore = test.totalMarks
-    const accuracy = test.questionsCount > 0 ? Math.round((correct / test.questionsCount) * 100) : 0
+    score = Math.round(score * 100) / 100
+    const maxScore = test.totalMarks || questions.length
+    const accuracy = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0
 
     const result = {
       score,
@@ -200,7 +288,43 @@ router.post('/attempts/submit', async (req, res) => {
       incorrect,
       unanswered,
       accuracy,
-      timeTakenSeconds: req.body.timeTakenSeconds || 0,
+      timeTakenSeconds,
+    }
+
+    // Persist attempt submission into MongoDB if connected
+    if (isDbConnected()) {
+      try {
+        let existingAttempt = null
+        if (attemptId) {
+          existingAttempt = await Attempt.findOne({ attemptId })
+        }
+
+        if (existingAttempt) {
+          existingAttempt.isSubmitted = true
+          existingAttempt.submittedAt = new Date()
+          existingAttempt.answers = answers
+          existingAttempt.result = result
+          if (req.user?._id && !existingAttempt.user) {
+            existingAttempt.user = req.user._id
+          }
+          await existingAttempt.save()
+        } else {
+          await Attempt.create({
+            attemptId: attemptId || `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            assessmentId: test.id,
+            branchId: test.branchId,
+            user: req.user?._id || null,
+            startedAt: new Date(Date.now() - timeTakenSeconds * 1000),
+            deadline: new Date(),
+            submittedAt: new Date(),
+            isSubmitted: true,
+            answers,
+            result
+          })
+        }
+      } catch (saveErr) {
+        console.warn('Could not persist attempt to DB:', saveErr.message)
+      }
     }
 
     res.json({ success: true, data: { result, attemptId } })
@@ -210,17 +334,15 @@ router.post('/attempts/submit', async (req, res) => {
   }
 })
 
-// GET /api/assessments/tests/:testId/result - Get detailed result for review (with explanations)
+// GET /api/assessments/tests/:testId/result - Review results with explanations
 router.get('/tests/:testId/result', async (req, res) => {
   try {
-    const test = assessments.find((a) => a.id === req.params.testId)
+    const test = await findTestById(req.params.testId)
     if (!test) {
       return res.status(404).json({ success: false, message: 'Test not found' })
     }
 
-    // This endpoint requires the user's previous answers from a saved attempt
-    // In production, fetch from DB. For now, return the questions with correct answers and explanations.
-    const questionsWithAnswers = test.questions.map((q) => ({
+    const questionsWithAnswers = (test.questions || []).map((q) => ({
       id: q.id,
       text: q.text,
       options: q.options,
@@ -244,8 +366,48 @@ router.get('/tests/:testId/result', async (req, res) => {
       },
     })
   } catch (err) {
-    console.error('Test result error:', err)
+    console.error('Test result review error:', err)
     res.status(500).json({ success: false, message: 'Failed to fetch result' })
+  }
+})
+
+// GET /api/assessments/my/attempts - Get history of submitted attempts for authenticated user
+router.get('/my/attempts', protect, async (req, res) => {
+  try {
+    if (!isDbConnected()) {
+      return res.json({ success: true, data: [] })
+    }
+
+    const attempts = await Attempt.find({ user: req.user._id, isSubmitted: true })
+      .sort({ createdAt: -1 })
+      .lean()
+
+    const enriched = attempts.map((a) => {
+      const test = assessments.find((t) => t.id === a.assessmentId)
+      return {
+        ...a,
+        testTitle: test ? test.title : a.assessmentId,
+        difficulty: test ? test.difficulty : 'Medium'
+      }
+    })
+
+    res.json({ success: true, data: enriched })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+})
+
+// POST /api/assessments/seed - Seed assessments into MongoDB (Admin only)
+router.post('/seed', protect, adminOnly, async (_req, res) => {
+  try {
+    if (!isDbConnected()) {
+      return res.status(503).json({ success: false, message: 'MongoDB is not connected.' })
+    }
+    await Assessment.deleteMany({})
+    const inserted = await Assessment.insertMany(assessments)
+    res.json({ success: true, message: `Successfully seeded ${inserted.length} assessments into MongoDB.` })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
   }
 })
 

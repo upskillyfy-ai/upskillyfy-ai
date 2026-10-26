@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 
 const attemptSchema = new mongoose.Schema({
+  attemptId: { type: String, index: true },
   assessmentId: { type: String, required: true, index: true },
   branchId: { type: String, required: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },

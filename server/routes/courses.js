@@ -1,4 +1,6 @@
 import express from 'express'
+import jwt from 'jsonwebtoken'
+import User from '../models/User.js'
 import courseApiService from '../services/courseApiService.js'
 
 const router = express.Router()
@@ -102,19 +104,66 @@ router.get('/:slug/lectures/:lectureId/playback', handlePlaybackRequest)
 router.post('/:slug/lectures/:lectureId/play', handlePlaybackRequest)
 
 /**
- * POST /api/courses/:id/enroll
- * Handle course enrollment
+ * Extract user if Bearer token is provided (allows both authenticated and guest workflows)
  */
-router.post('/:id/enroll', (req, res) => {
-  res.json({ success: true, message: `Successfully enrolled in course ${req.params.id}` })
+const getOptionalUser = async (req) => {
+  const token = req.headers.authorization?.split(' ')[1]
+  if (!token) return null
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'upskillyfy_super_secret_key_2026')
+    return await User.findById(decoded.id)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * POST /api/courses/:id/enroll
+ * Handle course enrollment and persist to user profile in MongoDB
+ */
+router.post('/:id/enroll', async (req, res) => {
+  const courseSlug = req.params.id
+  try {
+    const user = await getOptionalUser(req)
+    if (user) {
+      if (!user.enrolledCourses) user.enrolledCourses = []
+      if (!user.enrolledCourses.includes(courseSlug)) {
+        user.enrolledCourses.push(courseSlug)
+        await user.save()
+      }
+    }
+    res.json({ success: true, courseId: courseSlug, message: `Successfully enrolled in course ${courseSlug}` })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to record enrollment', message: err.message })
+  }
 })
 
 /**
  * POST /api/courses/:id/progress
- * Handle progress updates from CoursePlayer.jsx
+ * Handle lesson progress updates and persist completed lessons in MongoDB
  */
-router.post('/:id/progress', (req, res) => {
-  res.json({ success: true, progress: req.body, updatedAt: new Date() })
+router.post('/:id/progress', async (req, res) => {
+  const courseId = req.params.id
+  const { lessonId, completed } = req.body
+  try {
+    const user = await getOptionalUser(req)
+    if (user && lessonId) {
+      if (!user.completedLessons) user.completedLessons = []
+      const idx = user.completedLessons.findIndex(
+        l => l.courseId === courseId && l.lessonId === lessonId
+      )
+      if (completed && idx === -1) {
+        user.completedLessons.push({ courseId, lessonId, completedAt: new Date() })
+        await user.save()
+      } else if (!completed && idx !== -1) {
+        user.completedLessons.splice(idx, 1)
+        await user.save()
+      }
+    }
+    res.json({ success: true, courseId, lessonId, completed: !!completed })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update progress', message: err.message })
+  }
 })
 
 export default router

@@ -30,7 +30,7 @@ import {
   HelpCircle,
   AlertCircle
 } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 import {
   fetchTest,
   fetchTestReview,
@@ -44,7 +44,7 @@ import {
   autoSubmit,
   getSummary,
   isSubmitted,
-} from '../services/assessmentService'
+} from '../../services/assessmentService'
 import './AssessmentTest.css'
 
 export default function AssessmentTest() {

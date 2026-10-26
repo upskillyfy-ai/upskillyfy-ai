@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react'
-import { fetchBranch, fetchBranchTests } from '../services/assessmentService'
+import { fetchBranch, fetchBranchTests } from '../../services/assessmentService'
 import './AssessmentBranchTests.css'
 
 const DIFFICULTY_CLASS = {

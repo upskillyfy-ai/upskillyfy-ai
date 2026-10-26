@@ -3,7 +3,7 @@
    Teaching Experience, Emerging EdTech, & Professional Growth
    ========================================================= */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Presentation,
@@ -25,12 +25,18 @@ import {
   Copy,
   Check
 } from 'lucide-react'
-import { getAssessmentsByBranch } from '../data/assessmentsSeed'
+import { fetchBranchTests } from '../../services/assessmentService'
 import './AssessmentFaculty.css'
 
 export default function AssessmentFaculty() {
-  const facultyTests = getAssessmentsByBranch('faculty') || []
+  const [facultyTests, setFacultyTests] = useState([])
   const [copiedPromptIdx, setCopiedPromptIdx] = useState(null)
+
+  useEffect(() => {
+    fetchBranchTests('faculty').then((tests) => {
+      if (tests && tests.length > 0) setFacultyTests(tests)
+    })
+  }, [])
 
   const copyPrompt = (text, idx) => {
     navigator.clipboard.writeText(text)

@@ -5,43 +5,95 @@ import { protect } from '../middleware/auth.js'
 
 const router = express.Router()
 
-const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
+const getJwtSecret = () => process.env.JWT_SECRET || 'upskillyfy_super_secret_key_2026'
+const signToken = (id) => jwt.sign({ id }, getJwtSecret(), { expiresIn: '30d' })
 
-// Register
+// POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, branch, college, year } = req.body
-    const exists = await User.findOne({ email })
-    if (exists) return res.status(400).json({ message: 'Email already registered' })
-    const user = await User.create({ name, email, password, branch, college, year })
+    const { name, email, password, role, branch, college, year } = req.body
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' })
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' })
+    }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() })
+    if (existingUser) {
+      return res.status(400).json({ message: 'An account with this email already exists' })
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+      role: role && ['student', 'faculty'].includes(role) ? role : 'student',
+      branch: branch || '',
+      college: college || '',
+      year: year || ''
+    })
+
     const token = signToken(user._id)
+
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, branch: user.branch, role: user.role }
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        branch: user.branch,
+        college: user.college,
+        year: user.year,
+        enrolledCourses: user.enrolledCourses || [],
+        savedInternships: user.savedInternships || []
+      }
     })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    console.error('Registration error:', err)
+    res.status(500).json({ message: err.message || 'Failed to register account' })
   }
 })
 
-// Login
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body
-    const user = await User.findOne({ email })
-    if (!user || !(await user.comparePassword(password)))
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' })
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+    if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid email or password' })
+    }
+
     const token = signToken(user._id)
+
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, branch: user.branch, role: user.role }
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        branch: user.branch,
+        college: user.college,
+        year: user.year,
+        enrolledCourses: user.enrolledCourses || [],
+        savedInternships: user.savedInternships || []
+      }
     })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    console.error('Login error:', err)
+    res.status(500).json({ message: err.message || 'Failed to login' })
   }
 })
 
-// Get profile
+// GET /api/auth/me (Current user session)
 router.get('/me', protect, async (req, res) => {
   res.json(req.user)
 })

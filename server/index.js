@@ -10,6 +10,7 @@ import communityRoutes from './routes/community.js'
 import newsletterRoutes from './routes/newsletter.js'
 import assessmentRoutes from './routes/assessments.js'
 import courseRoutes from './routes/courses.js'
+import resourceRoutes from './routes/resources.js'
 
 dotenv.config()
 
@@ -49,6 +50,7 @@ app.use('/api/community', communityRoutes)
 app.use('/api/newsletter', newsletterRoutes)
 app.use('/api/assessments', assessmentRoutes)
 app.use('/api/courses', courseRoutes)
+app.use('/api/resources', resourceRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

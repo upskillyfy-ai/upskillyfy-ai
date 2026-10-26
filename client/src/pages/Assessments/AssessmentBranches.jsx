@@ -18,7 +18,7 @@ import {
   ArrowLeft,
   Presentation,
 } from 'lucide-react'
-import { fetchBranches } from '../services/assessmentService'
+import { fetchBranches } from '../../services/assessmentService'
 import './AssessmentBranches.css'
 
 const ICONS = {

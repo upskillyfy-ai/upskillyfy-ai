@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { X, CheckCircle2, ShieldCheck, Send, Sparkles, AlertCircle } from 'lucide-react'
+import { internshipAPI } from '../../api'
 import './ApplyModal.css'
 
 export default function ApplyModal({ internship, isOpen, onClose }) {
@@ -27,7 +28,7 @@ export default function ApplyModal({ internship, isOpen, onClose }) {
     if (errorMsg) setErrorMsg('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.fullName.trim() || !formData.email.trim() || !formData.resumeUrl.trim()) {
       setErrorMsg('Please fill in your name, email, and resume link.')
@@ -35,12 +36,23 @@ export default function ApplyModal({ internship, isOpen, onClose }) {
     }
 
     setSubmitting(true)
-    setTimeout(() => {
-      setSubmitting(false)
+    setErrorMsg('')
+
+    try {
+      const targetId = internship.slug || internship.id || internship._id
+      const res = await internshipAPI.apply(targetId, formData)
+      const trackingId = res.data?.applicationId || `UPS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+      setAppId(trackingId)
       setSubmitted(true)
-      const generatedId = `UPS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-      setAppId(generatedId)
-    }, 900)
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to submit application. Please check your network and try again.'
+      setErrorMsg(msg)
+      if (err.response?.data?.applicationId) {
+        setAppId(err.response.data.applicationId)
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleReset = () => {

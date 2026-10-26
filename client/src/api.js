@@ -30,6 +30,8 @@ export const authAPI = {
 export const internshipAPI = {
   getAll: (params) => API.get('/internships', { params }),
   getOne: (id) => API.get(`/internships/${id}`),
+  apply: (id, data) => API.post(`/internships/${id}/apply`, data),
+  getMyApplications: () => API.get('/internships/my/applications'),
   seed: () => API.post('/internships/seed'),
 }
 
@@ -78,6 +80,7 @@ export const assessmentAPI = {
   startAttempt: (testId) => API.post('/assessments/attempts/start', { testId }),
   submitAttempt: (payload) => API.post('/assessments/attempts/submit', payload),
   getTestResult: (testId) => API.get(`/assessments/tests/${testId}/result`),
+  getMyAttempts: () => API.get('/assessments/my/attempts'),
 }
 
 export default API

@@ -4,17 +4,19 @@ import { protect } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// Get profile
+// GET /api/users/profile
 router.get('/profile', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password').populate('savedInternships')
+    const user = await User.findById(req.user.id)
+      .select('-password')
+      .populate('savedInternships')
     res.json(user)
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
 })
 
-// Update profile
+// PUT /api/users/profile
 router.put('/profile', protect, async (req, res) => {
   try {
     const { name, branch, college, year, linkedin, github } = req.body
@@ -29,17 +31,19 @@ router.put('/profile', protect, async (req, res) => {
   }
 })
 
-// Save/unsave internship
+// POST /api/users/save-internship/:id
 router.post('/save-internship/:id', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
     const internshipId = req.params.id
+
     const idx = user.savedInternships.indexOf(internshipId)
     if (idx > -1) {
       user.savedInternships.splice(idx, 1)
     } else {
       user.savedInternships.push(internshipId)
     }
+
     await user.save()
     res.json({ saved: idx === -1, savedInternships: user.savedInternships })
   } catch (err) {
