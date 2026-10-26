@@ -1,21 +1,26 @@
 import mongoose from 'mongoose'
 
 const internshipSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  company: { type: String, required: true },
-  description: { type: String, required: true },
-  branch: { type: [String], default: ['All'] },
-  skills: [String],
-  stipend: { type: String, default: 'Unpaid' },
-  duration: { type: String, required: true },
-  mode: { type: String, enum: ['Remote', 'On-site', 'Hybrid', 'On-campus'], required: true },
+  slug: { type: String, required: true, unique: true, trim: true },
+  title: { type: String, required: true, trim: true },
+  company: { type: String, required: true, trim: true },
+  category: { type: String, default: 'fullstack' },
+  categoryLabel: { type: String, default: 'Full-Stack & Backend' },
   location: { type: String, default: 'Remote' },
-  applyLink: { type: String, default: '' },
-  deadline: { type: Date },
-  status: { type: String, enum: ['Open', 'Closing Soon', 'Closed', 'New'], default: 'Open' },
-  logo: { type: String, default: '' },
-  isVerified: { type: Boolean, default: false },
-  views: { type: Number, default: 0 },
+  mode: { type: String, enum: ['Remote', 'Hybrid', 'In-Office', 'On-site'], default: 'Remote' },
+  stipend: { type: String, default: 'Performance Based' },
+  duration: { type: String, default: '3 Months' },
+  deadline: { type: String, default: 'Open' },
+  openings: { type: Number, default: 1 },
+  applicantsCount: { type: Number, default: 0 },
+  skills: [{ type: String }],
+  ppoOffered: { type: Boolean, default: false },
+  ppoPackage: { type: String, default: '' },
+  overview: { type: String, default: '' },
+  responsibilities: [{ type: String }],
+  requirements: [{ type: String }],
+  perks: [{ type: String }],
+  isVerified: { type: Boolean, default: true }
 }, { timestamps: true })
 
 export default mongoose.model('Internship', internshipSchema)

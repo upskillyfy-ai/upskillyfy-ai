@@ -3,16 +3,26 @@ import bcrypt from 'bcryptjs'
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  email: { type: String, required: true, unique: true, lowercase: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true, minlength: 6 },
-  branch: { type: String, default: '' },
-  college: { type: String, default: '' },
-  year: { type: String, default: '' },
-  role: { type: String, enum: ['student', 'admin'], default: 'student' },
-  savedInternships: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Internship' }],
+  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
+  college: { type: String, default: '', trim: true },
+  branch: { type: String, default: '', trim: true },
+  year: { type: String, default: '', trim: true },
   avatar: { type: String, default: '' },
-  linkedin: { type: String, default: '' },
-  github: { type: String, default: '' },
+  linkedin: { type: String, default: '', trim: true },
+  github: { type: String, default: '', trim: true },
+
+  // Learning state
+  enrolledCourses: [{ type: String }],
+  completedLessons: [{
+    courseId: { type: String, required: true },
+    lessonId: { type: String, required: true },
+    completedAt: { type: Date, default: Date.now }
+  }],
+
+  // Career state
+  savedInternships: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Internship' }]
 }, { timestamps: true })
 
 userSchema.pre('save', async function(next) {
