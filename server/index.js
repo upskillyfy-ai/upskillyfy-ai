@@ -15,8 +15,26 @@ dotenv.config()
 
 const app = express()
 
+const clientUrlEnv = process.env.CLIENT_URL || ''
+const configuredOrigins = clientUrlEnv.split(',').map(u => u.trim()).filter(Boolean)
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow non-browser requests (like server-to-server, Postman, mobile)
+    if (!origin) return callback(null, true)
+
+    // Allow configured URLs, all Vercel preview/production deployments, and localhost
+    if (
+      configuredOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('upskillyfy')
+    ) {
+      return callback(null, true)
+    }
+
+    return callback(null, true)
+  },
   credentials: true
 }))
 app.use(express.json())
@@ -38,9 +56,13 @@ app.get('/api/health', (req, res) => {
 })
 
 // MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.log('❌ MongoDB Error:', err.message))
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ MongoDB Connected'))
+    .catch(err => console.log('❌ MongoDB Error:', err.message))
+} else {
+  console.log('⚠️ MONGODB_URI not set. Running server without database connection.')
+}
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {

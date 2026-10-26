@@ -1,7 +1,10 @@
 import axios from 'axios'
 
 const getBaseURL = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+  if (import.meta.env.VITE_API_URL) {
+    const raw = import.meta.env.VITE_API_URL.trim().replace(/\/+$/, '')
+    return raw.endsWith('/api') ? raw : `${raw}/api`
+  }
   // In development, default to local express server
   if (import.meta.env.DEV) return 'http://localhost:5000/api'
   // In production (e.g. Vercel), avoid pinging localhost:5000 to prevent PNA browser popup

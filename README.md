@@ -69,9 +69,7 @@ SERVER_URL=http://localhost:5000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/upskillyfy
 JWT_SECRET=your_super_secret_jwt_key_2026
 
-# Course Licensing & Playback API (Hosted on Render)
-COURSE_API_BASE_URL=https://course-api-1eqv.onrender.com
-COURSE_API_KEY=cap_live_69b5446095cf8a01a5ba4f5be5b2c9c7a84e6aa077d67110
+
 ```
 
 ---
