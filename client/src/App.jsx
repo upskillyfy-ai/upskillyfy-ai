@@ -29,7 +29,7 @@ import Internships from "./pages/Career/Internships/Internships";
 import InternshipDetail from "./pages/Career/Internships/InternshipDetail";
 import Placements from "./pages/Career/Placements/Placements";
 import DSAHub from "./pages/Career/DSA/DSAHub";
-import { ResumeEditor, ResumeGallery, ResumeProjects, ResumeTemplateDetail } from "./pages/Career/Resume/ResumeWorkspace";
+import { ResumeGallery, ResumeTemplateDetail } from "./pages/Career/Resume/ResumeWorkspace";
 import ATSResumeBuilder from "./pages/Career/Resume/ATSResumeBuilder";
 import OverleafDashboard from "./pages/Career/Resume/OverleafDashboard";
 import OverleafEditor from "./pages/Career/Resume/OverleafEditor";
