@@ -5,18 +5,18 @@ import { ThemeProvider } from "./context/ThemeContext";
 
 import MainLayout from "./layouts/MainLayout";
 
-import Home from "./pages/Home";
-import About from "./pages/About";
-import Portfolio from "./pages/Portfolio";
-import Contact from "./pages/Contact";
+import Home from "./pages/Home/Home";
+import About from "./pages/About/About";
+import Portfolio from "./pages/Portfolio/Portfolio";
+import Contact from "./pages/Contact/Contact";
 import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
-import Dashboard from "./pages/Dashboard";
-import AssessmentHub from "./pages/Assessments/AssessmentHub";
-import AssessmentFaculty from "./pages/Assessments/AssessmentFaculty";
-import AssessmentBranches from "./pages/Assessments/AssessmentBranches";
-import AssessmentBranchTests from "./pages/Assessments/AssessmentBranchTests";
-import AssessmentTest from "./pages/Assessments/AssessmentTest";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import AssessmentHub from "./pages/Career/Assessments/AssessmentHub";
+import AssessmentFaculty from "./pages/Career/Assessments/AssessmentFaculty";
+import AssessmentBranches from "./pages/Career/Assessments/AssessmentBranches";
+import AssessmentBranchTests from "./pages/Career/Assessments/AssessmentBranchTests";
+import AssessmentTest from "./pages/Career/Assessments/AssessmentTest";
 
 import ITServices from "./pages/Services/ITServices";
 import ITSupport from "./pages/Services/ITSupport";
@@ -25,20 +25,23 @@ import AIAutomation from "./pages/Services/AIAutomation";
 import UIUX from "./pages/Services/UIUX";
 import Cloud from "./pages/Services/Cloud";
 
-import Internships from "./pages/Career/Internships";
-import InternshipDetail from "./pages/Career/InternshipDetail";
-import Placements from "./pages/Career/Placements";
-import DSAHub from "./pages/Career/DSAHub";
-import ResumeBuilder from "./pages/Career/ResumeBuilder";
+import Internships from "./pages/Career/Internships/Internships";
+import InternshipDetail from "./pages/Career/Internships/InternshipDetail";
+import Placements from "./pages/Career/Placements/Placements";
+import DSAHub from "./pages/Career/DSA/DSAHub";
+import { ResumeEditor, ResumeGallery, ResumeProjects, ResumeTemplateDetail } from "./pages/Career/Resume/ResumeWorkspace";
+import ATSResumeBuilder from "./pages/Career/Resume/ATSResumeBuilder";
+import OverleafDashboard from "./pages/Career/Resume/OverleafDashboard";
+import OverleafEditor from "./pages/Career/Resume/OverleafEditor";
 
-import Courses from "./pages/Learning/Courses";
-import CoursePlayer from "./pages/Learning/CoursePlayer";
-import Roadmaps from "./pages/Learning/Roadmaps";
-import RoadmapDetail from "./pages/Learning/RoadmapDetail";
-import Resources from "./pages/Learning/Resources";
+import Courses from "./pages/Learning/Courses/Courses";
+import CoursePlayer from "./pages/Learning/Courses/CoursePlayer";
+import Roadmaps from "./pages/Learning/Roadmaps/Roadmaps";
+import RoadmapDetail from "./pages/Learning/Roadmaps/RoadmapDetail";
+import Resources from "./pages/Learning/Resources/Resources";
 
-import Events from "./pages/Community/Events";
-import Ambassador from "./pages/Community/Ambassador";
+import Events from "./pages/Community/Events/Events";
+import Ambassador from "./pages/Community/Ambassador/Ambassador";
 
 export default function App() {
   return (
@@ -110,8 +113,12 @@ export default function App() {
             <Route path="/career/dsa" element={<DSAHub />} />
             <Route
               path="/career/resume"
-              element={<ResumeBuilder />}
+              element={<ResumeGallery />}
             />
+            <Route path="/career/resume/templates/:templateId" element={<ResumeTemplateDetail />} />
+            <Route path="/career/resume/create" element={<ATSResumeBuilder />} />
+            <Route path="/career/resume/projects" element={<OverleafDashboard />} />
+            <Route path="/career/resume/editor/:projectId" element={<OverleafEditor />} />
             <Route
               path="/career/interviews"
               element={<Contact />}

@@ -71,6 +71,12 @@ export const resourceAPI = {
   bookmark: (id) => API.post(`/resources/${id}/bookmark`),
 }
 
+export const roadmapAPI = {
+  getAll: (params) => API.get('/roadmaps', { params }),
+  getOne: (id) => API.get(`/roadmaps/${id}`),
+  seed: () => API.post('/roadmaps/seed'),
+}
+
 export const assessmentAPI = {
   getBranches: () => API.get('/assessments/branches'),
   getBranch: (branchId) => API.get(`/assessments/branches/${branchId}`),
@@ -81,6 +87,26 @@ export const assessmentAPI = {
   submitAttempt: (payload) => API.post('/assessments/attempts/submit', payload),
   getTestResult: (testId) => API.get(`/assessments/tests/${testId}/result`),
   getMyAttempts: () => API.get('/assessments/my/attempts'),
+}
+
+export const resumeProjectAPI = {
+  list: () => API.get('/resume-projects'),
+  get: (id) => API.get(`/resume-projects/${encodeURIComponent(id)}`),
+  create: (project) => API.post('/resume-projects', project),
+  update: (id, project) => API.put(`/resume-projects/${encodeURIComponent(id)}`, project),
+  remove: (id) => API.delete(`/resume-projects/${encodeURIComponent(id)}`),
+  compile: (project) => API.post('/resume-projects/compile', project, { responseType: 'blob' }),
+  sourceZip: (id) => API.get(`/resume-projects/${encodeURIComponent(id)}/source.zip`, { responseType: 'blob' }),
+  importZip: (archive) => {
+    const form = new FormData()
+    form.append('archive', archive)
+    return API.post('/resume-projects/import-zip', form)
+  },
+}
+
+export const latexTemplateAPI = {
+  list: (params) => API.get('/latex-templates', { params }),
+  get: (id) => API.get(`/latex-templates/${encodeURIComponent(id)}`),
 }
 
 export default API

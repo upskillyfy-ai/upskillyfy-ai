@@ -2,7 +2,7 @@ import express from 'express'
 import mongoose from 'mongoose'
 import Resource from '../models/Resource.js'
 import { protect, adminOnly } from '../middleware/auth.js'
-import { RESOURCES_DATA } from '../../client/src/data/resourcesData.js'
+import { RESOURCES_DATA } from '../data/resourcesSeed.js'
 
 const router = express.Router()
 

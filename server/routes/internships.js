@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 import Internship from '../models/Internship.js'
 import Application from '../models/Application.js'
 import { protect, adminOnly, optionalAuth } from '../middleware/auth.js'
-import { INTERNSHIPS_DATA } from '../../client/src/data/internshipsData.js'
+import { INTERNSHIPS_DATA } from '../data/internshipsSeed.js'
 
 const router = express.Router()
 
